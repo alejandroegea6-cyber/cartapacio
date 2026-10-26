@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#3E6A32">
+<title>Apunta</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icono-192.png">
+<style>
+  :root {
+    color-scheme: light;
+    --fondo: #F1F2EC;
+    --superficie: #FFFFFF;
+    --tinta: #1E241B;
+    --tenue: #5B6454;
+    --linea: #D5D9CC;
+    --campo: #3E6A32;
+    --campo-tinta: #FFFFFF;
+    --campo-suave: #E3ECDB;
+    --tierra: #8A6337;
+    --tierra-suave: #F3EADD;
+    --fallo: #B3261E;
+    --fallo-suave: #F9E3E1;
+    --cabecera: 3.25rem;
+    --asomo: 8.5rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --fondo: #12160F;
+      --superficie: #1B2017;
+      --tinta: #E6E9E0;
+      --tenue: #A2AA98;
+      --linea: #343B2E;
+      --campo: #7DAE69;
+      --campo-tinta: #10200A;
+      --campo-suave: #233320;
+      --tierra: #D2A46C;
+      --tierra-suave: #2D2418;
+      --fallo: #F2B8B5;
+      --fallo-suave: #3A1D1B;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--fondo);
+    color: var(--tinta);
+    font-family: Roboto, "Google Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 1rem;
+    line-height: 1.45;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    -webkit-tap-highlight-color: transparent;
+  }
+  header {
+    height: var(--cabecera);
+    display: flex; align-items: center; gap: .75rem;
+    padding: 0 .5rem 0 1rem;
+  }
+  header h1 { font-size: 1.25rem; font-weight: 500; margin: 0; letter-spacing: .01em; }
+  #estado {
+    margin-left: auto;
+    font-size: .875rem; color: var(--tenue);
+    padding: .25rem .625rem; border-radius: 1rem;
+    border: 1px solid transparent;
+    background: none; font-family: inherit;
+  }
+  #estado.pendiente { color: var(--tierra); background: var(--tierra-suave); border-color: var(--tierra); }
+  #estado.sin-red { color: var(--tenue); border-color: var(--linea); }
+  .icono-btn {
+    width: 3rem; height: 3rem; border: 0; background: none; color: var(--tenue);
+    border-radius: 50%; display: grid; place-items: center; cursor: pointer;
+  }
+  .icono-btn:focus-visible, button:focus-visible, textarea:focus-visible, input:focus-visible {
+    outline: 3px solid var(--campo); outline-offset: 2px;
+  }
+
+  #escribir {
+    height: calc(100dvh - var(--cabecera) - var(--asomo) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    min-height: 15rem;
+    display: flex; flex-direction: column; gap: .75rem;
+    padding: 0 1rem .75rem;
+  }
+  body.escribiendo #escribir { height: calc(100dvh - var(--cabecera) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); }
+  textarea {
+    flex: 1;
+    width: 100%;
+    resize: none;
+    font: inherit; font-size: 1.25rem; line-height: 1.5;
+    color: var(--tinta); background: var(--superficie);
+    border: 1px solid var(--linea); border-radius: .75rem;
+    padding: 1rem;
+  }
+  textarea::placeholder { color: var(--tenue); }
+  #guardar {
+    flex: none;
+    height: 4.25rem;
+    border: 0; border-radius: 2.125rem;
+    background: var(--campo); color: var(--campo-tinta);
+    font: inherit; font-size: 1.25rem; font-weight: 500; letter-spacing: .02em;
+    cursor: pointer;
+    transition: transform .08s ease;
+  }
+  #guardar:active { transform: scale(.98); }
+  #guardar:disabled { opacity: .55; }
+
+  main { padding: 0 1rem 2rem; }
+  #resultado { margin: 0 0 1rem; padding: .875rem 1rem; border-radius: .75rem; border-left: 4px solid; }
+  #resultado[hidden] { display: none; }
+  #resultado.ok { background: var(--campo-suave); border-color: var(--campo); }
+  #resultado.espera { background: var(--superficie); border-color: var(--linea); color: var(--tenue); }
+  #resultado.fallo { background: var(--fallo-suave); border-color: var(--fallo); }
+  #resultado strong { display: block; font-weight: 500; margin-bottom: .25rem; }
+  #resultado .fallo-titulo { color: var(--fallo); }
+  #resultado .detalle { font-size: .9375rem; color: var(--tenue); }
+  #resultado .citado { margin-top: .375rem; white-space: pre-wrap; word-break: break-word; }
+
+  #aviso-pendientes {
+    display: flex; align-items: center; gap: .75rem;
+    margin: 0 0 1rem; padding: .75rem 1rem; border-radius: .75rem;
+    background: var(--tierra-suave); color: var(--tierra);
+  }
+  #aviso-pendientes[hidden] { display: none; }
+  #aviso-pendientes span { flex: 1; }
+  .btn-texto {
+    border: 1px solid currentColor; background: none; color: inherit;
+    font: inherit; font-weight: 500; padding: .5rem .875rem; border-radius: 1.25rem; cursor: pointer;
+  }
+
+  .seccion-titulo { display: flex; align-items: baseline; gap: .5rem; margin: .25rem 0 .5rem; }
+  .seccion-titulo h2 { font-size: 1rem; font-weight: 500; margin: 0; }
+  .seccion-titulo small { color: var(--tenue); font-size: .8125rem; margin-left: auto; }
+  #hoy { list-style: none; margin: 0; padding: 0; }
+  #hoy li {
+    display: grid; grid-template-columns: 3.25rem 1fr; gap: .5rem;
+    padding: .625rem 0; border-top: 1px solid var(--linea);
+  }
+  #hoy li:first-child { border-top: 0; }
+  #hoy .hora { color: var(--tenue); font-variant-numeric: tabular-nums; }
+  #hoy .texto { white-space: pre-wrap; word-break: break-word; }
+  #hoy .marca { display: block; font-size: .8125rem; color: var(--tenue); }
+  #hoy li.pend .marca { color: var(--tierra); }
+  #hoy .vacio { display: block; color: var(--tenue); padding: .5rem 0; border: 0; }
+
+  dialog {
+    width: min(32rem, calc(100vw - 2rem));
+    border: 0; border-radius: 1.25rem; padding: 1.25rem;
+    background: var(--superficie); color: var(--tinta);
+  }
+  dialog::backdrop { background: rgb(0 0 0 / .45); }
+  dialog h2 { margin: 0 0 .25rem; font-size: 1.25rem; font-weight: 500; }
+  dialog p { margin: 0 0 1rem; color: var(--tenue); font-size: .9375rem; }
+  dialog label { display: block; font-size: .875rem; color: var(--tenue); margin: .75rem 0 .25rem; }
+  dialog input {
+    width: 100%; font: inherit; font-size: 1rem; padding: .75rem;
+    border: 1px solid var(--linea); border-radius: .5rem;
+    background: var(--fondo); color: var(--tinta);
+  }
+  #prueba { min-height: 1.5rem; margin: .75rem 0 0; font-size: .9375rem; }
+  #prueba.ok { color: var(--campo); }
+  #prueba.fallo { color: var(--fallo); }
+  .botones { display: flex; gap: .5rem; justify-content: flex-end; margin-top: 1rem; flex-wrap: wrap; }
+  .btn-lleno {
+    border: 0; background: var(--campo); color: var(--campo-tinta);
+    font: inherit; font-weight: 500; padding: .625rem 1.25rem; border-radius: 1.25rem; cursor: pointer;
+  }
+  .btn-plano { border: 0; background: none; color: var(--campo); font: inherit; font-weight: 500; padding: .625rem 1rem; border-radius: 1.25rem; cursor: pointer; }
+  @media (prefers-reduced-motion: reduce) { #guardar { transition: none; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Apunta</h1>
+  <button id="estado" type="button" aria-live="polite"></button>
+  <button class="icono-btn" id="abrir-ajustes" type="button" aria-label="Ajustes">
+    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.3 7.3 0 0 0-1.7-1l-.4-2.6h-4l-.4 2.7a7.3 7.3 0 0 0-1.7 1l-2.5-1-2 3.4L6.6 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1c.5.4 1.1.7 1.7 1l.4 2.7h4l.4-2.7c.6-.3 1.2-.6 1.7-1l2.5 1 2-3.5L19.4 13ZM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z"/></svg>
+  </button>
+</header>
+
+<section id="escribir">
+  <textarea id="texto" placeholder="Toca aquí y dicta con el micrófono del teclado" aria-label="Apunte"></textarea>
+  <button id="guardar" type="button">Guardar</button>
+</section>
+
+<main>
+  <div id="resultado" role="status" aria-live="polite" hidden></div>
+  <div id="aviso-pendientes" hidden>
+    <span id="aviso-texto"></span>
+    <button class="btn-texto" id="enviar-ya" type="button">Enviar ahora</button>
+  </div>
+  <div class="seccion-titulo"><h2>Hoy</h2><small id="hoy-actualizado"></small></div>
+  <ul id="hoy"></ul>
+</main>
+
+<dialog id="ajustes">
+  <h2>Conexión con la hoja</h2>
+  <p>Pega la dirección del script publicado y su clave. Se guardan solo en este móvil.</p>
+  <label for="url">Dirección del script (termina en /exec)</label>
+  <input id="url" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://script.google.com/macros/s/…/exec">
+  <label for="clave">Clave</label>
+  <input id="clave" type="text" autocomplete="off" spellcheck="false" autocapitalize="off">
+  <div id="prueba" role="status"></div>
+  <div class="botones">
+    <button class="btn-plano" id="cerrar-ajustes" type="button">Cerrar</button>
+    <button class="btn-plano" id="probar" type="button">Probar conexión</button>
+    <button class="btn-lleno" id="guardar-ajustes" type="button">Guardar</button>
+  </div>
+</dialog>
+
+<script src="cola.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const texto = $('texto');
+
+const MENSAJES = {
+  red: 'Sin conexión. El apunte está guardado en el móvil y se enviará al volver la señal.',
+  tiempo: 'La hoja no ha respondido a tiempo. El apunte sigue en el móvil y se reintentará (si llegó a escribirse, no se duplicará).',
+  clave: 'La hoja rechaza la clave. Corrígela en Ajustes. El apunte sigue guardado en el móvil.',
+  sin_config: 'Falta la dirección del script o la clave. Ponlas en Ajustes. El apunte sigue guardado en el móvil.',
+  respuesta_rara: 'El script no responde como debe. Comprueba que está publicado con acceso «Cualquier usuario». El apunte sigue en el móvil.',
+  script: 'El script ha dado un error al escribir. El apunte sigue en el móvil.',
+  vacio: 'El apunte llegó vacío y la hoja no lo ha guardado.',
+  fecha: 'La fecha del apunte no es válida y la hoja no lo ha guardado.'
+};
+const CORTO = { red: 'sin conexión', tiempo: 'la hoja no respondió a tiempo', clave: 'clave incorrecta', sin_config: 'falta configurar la conexión', respuesta_rara: 'el script no responde bien', script: 'error del script' };
+const explicar = (e) => (MENSAJES[e.codigo] || ('Error desconocido (' + (e.codigo || e.message) + '). El apunte sigue en el móvil.')) + (e.detalle ? ' Detalle: ' + e.detalle : '');
+
+function esc(s) { return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+const horaDe = (iso) => new Date(iso).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+const fechaHoraDe = (iso) => new Date(iso).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+// ---------- Pantalla ----------
+function mostrarResultado(tipo, html) {
+  const r = $('resultado');
+  r.className = tipo; r.innerHTML = html; r.hidden = false;
+}
+
+async function pintar() {
+  const pendientes = await Cola.todos();
+  const n = pendientes.length;
+
+  const estado = $('estado');
+  if (n > 0) { estado.textContent = n === 1 ? '1 pendiente' : n + ' pendientes'; estado.className = 'pendiente'; }
+  else if (!navigator.onLine) { estado.textContent = 'Sin red'; estado.className = 'sin-red'; }
+  else { estado.textContent = 'Todo en la hoja'; estado.className = ''; }
+
+  $('aviso-pendientes').hidden = n === 0;
+  if (n > 0) {
+    const err = pendientes[0].ultimoError;
+    const motivo = err ? ' Último intento: ' + (CORTO[err] || err) + '.' : '';
+    $('aviso-texto').textContent = (n === 1 ? 'Queda 1 apunte' : 'Quedan ' + n + ' apuntes') + ' en el móvil sin llegar a la hoja.' + motivo;
+  }
+
+  const guardadoHoy = await Ajustes.leer('hoy');
+  const deHoja = guardadoHoy && guardadoHoy.dia === diaLocal() ? guardadoHoy.lista : [];
+  const pendHoy = pendientes.filter((p) => diaLocal(p.fecha) === diaLocal()).reverse();
+
+  const filas = [];
+  pendHoy.forEach((p) => filas.push(
+    '<li class="pend"><span class="hora">' + horaDe(p.fecha) + '</span><span><span class="texto">' + esc(p.texto) + '</span><span class="marca">Pendiente de enviar</span></span></li>'));
+  deHoja.forEach((a) => filas.push(
+    '<li><span class="hora">' + esc(a.hora) + '</span><span><span class="texto">' + esc(a.texto) + '</span><span class="marca">En la hoja, fila ' + a.fila + '</span></span></li>'));
+  $('hoy').innerHTML = filas.length ? filas.join('') : '<li class="vacio">Aún no hay apuntes hoy.</li>';
+
+  const act = await Ajustes.leer('hoyActualizado');
+  $('hoy-actualizado').textContent = act && diaLocal(act) === diaLocal() ? 'Leído de la hoja a las ' + horaDe(act) : '';
+}
+
+// ---------- Guardar ----------
+async function guardar() {
+  const contenido = texto.value.trim();
+  if (!contenido) { texto.focus(); return; }
+
+  const apunte = { id: crypto.randomUUID(), fecha: new Date().toISOString(), texto: contenido };
+  try {
+    await Cola.meter(apunte);          // primero al móvil: así nunca se pierde
+  } catch (e) {
+    mostrarResultado('fallo', '<strong class="fallo-titulo">No se ha podido guardar ni en el móvil</strong><span class="detalle">El texto sigue en el cuadro. Cópialo antes de cerrar la app.</span>');
+    return;
+  }
+  texto.value = '';
+  texto.blur();
+  $('guardar').disabled = true;
+  mostrarResultado('espera', '<strong>Enviando a la hoja…</strong><div class="citado">' + esc(contenido) + '</div>');
+  pedirEnvioEnSegundoPlano();
+  await pintar();
+
+  let r = await enviarPendientes();
+  let mio = r.enviados.find((x) => x.id === apunte.id);
+  // Si ya había un envío en marcha que no lo incluía, se lanza otro.
+  if (!mio && !r.error && (await Cola.todos()).some((p) => p.id === apunte.id)) {
+    r = await enviarPendientes();
+    mio = r.enviados.find((x) => x.id === apunte.id);
+  }
+  $('guardar').disabled = false;
+  if (mio) {
+    await Ajustes.guardar('hoyActualizado', new Date().toISOString());
+    mostrarResultado('ok',
+      '<strong>Guardado en la hoja, fila ' + mio.fila + (mio.repetido ? ' (ya estaba, no se ha duplicado)' : '') + '</strong>' +
+      '<span class="detalle">' + esc(mio.fechaHoja) + '</span>' +
+      '<div class="citado">' + esc(mio.textoHoja) + '</div>');
+  } else if (r.error) {
+    mostrarResultado('fallo', '<strong class="fallo-titulo">No ha llegado a la hoja</strong><span class="detalle">' + esc(explicar(r.error)) + '</span>');
+  } else {
+    mostrarResultado('espera', '<strong>En el móvil, pendiente de enviar</strong>');
+  }
+  await pintar();
+}
+
+// ---------- Envíos automáticos ----------
+let ultimoAvisoEnvio = 0;
+async function reintentar(manual) {
+  const pend = await Cola.todos();
+  if (!pend.length) return;
+  if (!manual && !navigator.onLine) return;
+  const r = await enviarPendientes();
+  if (r.enviados.length) {
+    await Ajustes.guardar('hoyActualizado', new Date().toISOString());
+    const ultimo = r.enviados[r.enviados.length - 1];
+    mostrarResultado('ok', '<strong>' + (r.enviados.length === 1 ? 'Enviado 1 apunte pendiente' : 'Enviados ' + r.enviados.length + ' apuntes pendientes') + '</strong>' +
+      '<span class="detalle">Último: fila ' + ultimo.fila + ', ' + esc(ultimo.fechaHoja) + '</span><div class="citado">' + esc(ultimo.textoHoja) + '</div>');
+  } else if (r.error && (manual || Date.now() - ultimoAvisoEnvio > 60000)) {
+    ultimoAvisoEnvio = Date.now();
+    if (manual) mostrarResultado('fallo', '<strong class="fallo-titulo">Sigue sin llegar a la hoja</strong><span class="detalle">' + esc(explicar(r.error)) + '</span>');
+  }
+  await pintar();
+}
+
+async function refrescarHoy() {
+  if (!navigator.onLine) return;
+  if ((await Cola.todos()).length) return; // primero que se vacíe la cola
+  try {
+    const r = await llamarScript({ accion: 'hoy' });
+    await Ajustes.guardar('hoy', { dia: diaLocal(), lista: r.hoy });
+    await Ajustes.guardar('hoyActualizado', new Date().toISOString());
+    await pintar();
+  } catch (e) { /* sin red o sin configurar: se queda lo último guardado */ }
+}
+
+async function pedirEnvioEnSegundoPlano() {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    if ('sync' in reg) await reg.sync.register('enviar-apuntes');
+  } catch (e) { /* no disponible: se envía con la app abierta */ }
+}
+
+// ---------- Ajustes ----------
+async function abrirAjustes() {
+  $('url').value = (await Ajustes.leer('url')) || '';
+  $('clave').value = (await Ajustes.leer('clave')) || '';
+  $('prueba').textContent = ''; $('prueba').className = '';
+  $('ajustes').showModal();
+}
+async function guardarAjustes() {
+  const url = $('url').value.trim();
+  const clave = $('clave').value.trim();
+  if (!/^https:\/\/script\.google\.com\/.+\/exec$/.test(url)) {
+    $('prueba').className = 'fallo';
+    $('prueba').textContent = 'La dirección debe empezar por https://script.google.com/ y terminar en /exec.';
+    return false;
+  }
+  if (!clave) { $('prueba').className = 'fallo'; $('prueba').textContent = 'Falta la clave.'; return false; }
+  await Ajustes.guardar('url', url);
+  await Ajustes.guardar('clave', clave);
+  return true;
+}
+async function probar() {
+  if (!(await guardarAjustes())) return;
+  $('prueba').className = ''; $('prueba').textContent = 'Probando…';
+  try {
+    const r = await llamarScript({ accion: 'hoy' });
+    await Ajustes.guardar('hoy', { dia: diaLocal(), lista: r.hoy });
+    await Ajustes.guardar('hoyActualizado', new Date().toISOString());
+    $('prueba').className = 'ok';
+    $('prueba').textContent = 'Conectado con la hoja. Apuntes de hoy en ella: ' + r.hoy.length + '.';
+    await pintar();
+  } catch (e) {
+    $('prueba').className = 'fallo'; $('prueba').textContent = explicar(e).replace(/ El apunte.*$/, '');
+  }
+}
+
+// ---------- Arranque ----------
+// Que tocar Guardar no quite el foco al cuadro antes de tiempo (si no, la pantalla se recoloca y el toque se pierde).
+$('guardar').addEventListener('pointerdown', (e) => e.preventDefault());
+$('guardar').addEventListener('mousedown', (e) => e.preventDefault());
+$('guardar').addEventListener('click', guardar);
+$('enviar-ya').addEventListener('click', () => reintentar(true));
+$('estado').addEventListener('click', () => reintentar(true));
+$('abrir-ajustes').addEventListener('click', abrirAjustes);
+$('cerrar-ajustes').addEventListener('click', () => $('ajustes').close());
+$('probar').addEventListener('click', probar);
+$('guardar-ajustes').addEventListener('click', async () => { if (await guardarAjustes()) { $('ajustes').close(); reintentar(true); refrescarHoy(); } });
+texto.addEventListener('focus', () => document.body.classList.add('escribiendo'));
+texto.addEventListener('blur', () => document.body.classList.remove('escribiendo'));
+window.addEventListener('online', () => { pintar(); reintentar(false).then(refrescarHoy); });
+window.addEventListener('offline', pintar);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { pintar(); reintentar(false).then(refrescarHoy); } });
+setInterval(() => reintentar(false), 30000);
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+  navigator.serviceWorker.addEventListener('message', (e) => { if (e.data && e.data.tipo === 'sincronizado') pintar(); });
+}
+if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+
+(async () => {
+  // Enlace de configuración: …/#url=…&clave=… (lo que va tras # no sale del móvil)
+  const enlace = new URLSearchParams(location.hash.slice(1));
+  if (enlace.get('url') && enlace.get('clave')) {
+    await Ajustes.guardar('url', enlace.get('url'));
+    await Ajustes.guardar('clave', enlace.get('clave'));
+    history.replaceState(null, '', location.pathname);
+  }
+  await pintar();
+  if (!(await Ajustes.leer('url'))) { abrirAjustes(); return; }
+  await reintentar(false);
+  await refrescarHoy();
+})();
+</script>
+</body>
+</html>
