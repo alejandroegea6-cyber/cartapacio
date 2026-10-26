@@ -297,7 +297,7 @@ async function pintarUltimo() {
     meta.textContent = cuando + ' · pendiente de enviar' + extra;
   } else {
     meta.className = pend.length ? 'pend' : '';
-    meta.textContent = cuando + ' · en la hoja, fila ' + ultimo.fila + (pend.length ? ' · ' + pend.length + (pend.length === 1 ? ' pendiente' : ' pendientes') : '');
+    meta.textContent = (cuando ? cuando + ' · ' : '') + 'en la hoja, fila ' + ultimo.fila + (pend.length ? ' · ' + pend.length + (pend.length === 1 ? ' pendiente' : ' pendientes') : '');
   }
 }
 
@@ -327,7 +327,7 @@ function pintarLista() {
     const cuando = el.fecha ? hora(el.fecha) : esc(el.fechaHoja || '');
     const estado = el.pend ? 'pendiente de enviar' : 'fila ' + el.fila;
     const clases = 'nota' + (el.pend ? ' pend' : '') + (actual && actual.clave === el.clave ? ' actual' : '');
-    html += '<div class="' + clases + '" id="n-' + el.clave + '"><div class="meta">' + cuando + ' · ' + estado + '</div><div class="texto">' + resaltar(el, q) + '</div></div>';
+    html += '<div class="' + clases + '" id="n-' + el.clave + '"><div class="meta">' + (cuando ? cuando + ' · ' : '') + estado + '</div><div class="texto">' + resaltar(el, q) + '</div></div>';
   }
   lista.innerHTML = html;
 }
@@ -407,7 +407,6 @@ async function guardar() {
   if (abierta) abrirLista(false);
   estadoUltimo = { tipo: 'enviando', meta: 'Enviando a la hoja…', texto: contenido };
   await cargar(); pintarUltimo();
-  pedirEnvioEnSegundoPlano();
 
   let r = await enviarPendientes();
   let mio = r.enviados.find((x) => x.id === apunte.id);
@@ -421,6 +420,7 @@ async function guardar() {
     estadoUltimo = { tipo: 'ok', meta: 'En la hoja, fila ' + mio.fila + ' · ' + mio.fechaHoja + (mio.repetido ? ' (ya estaba, no se ha duplicado)' : ''), texto: mio.textoHoja };
     destello();
   } else if (r.error) {
+    if (DE_RED.includes(r.error.codigo)) pedirEnvioEnSegundoPlano();   // que Chrome lo envíe aunque cierres la app
     estadoUltimo = DE_RED.includes(r.error.codigo)
       ? { tipo: 'pend', meta: 'Sin conexión: guardado en el móvil, se enviará solo', texto: contenido }
       : { tipo: 'fallo', meta: 'No ha llegado a la hoja. ' + explicar(r.error), texto: contenido };
