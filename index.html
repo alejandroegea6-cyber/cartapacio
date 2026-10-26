@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="theme-color" content="#3E6A32">
-<title>Apunta</title>
+<title>Cartapacio</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icono-192.png">
 <style>
@@ -21,9 +21,8 @@
     --tierra: #8A6337;
     --tierra-suave: #F3EADD;
     --fallo: #B3261E;
-    --fallo-suave: #F9E3E1;
-    --cabecera: 3.25rem;
-    --asomo: 8.5rem;
+    --marca: #F2D98C;
+    --marca-actual: #E0A93B;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -39,111 +38,118 @@
       --tierra: #D2A46C;
       --tierra-suave: #2D2418;
       --fallo: #F2B8B5;
-      --fallo-suave: #3A1D1B;
+      --marca: #5C4A1C;
+      --marca-actual: #9A6A12;
     }
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; }
+  html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; }
   body {
     background: var(--fondo);
     color: var(--tinta);
     font-family: Roboto, "Google Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
     font-size: 1rem;
     line-height: 1.45;
-    padding-top: env(safe-area-inset-top, 0px);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: .75rem;
+    padding: calc(env(safe-area-inset-top, 0px) + .75rem) .75rem calc(env(safe-area-inset-bottom, 0px) + .75rem);
     -webkit-tap-highlight-color: transparent;
   }
-  header {
-    height: var(--cabecera);
-    display: flex; align-items: center; gap: .75rem;
-    padding: 0 .5rem 0 1rem;
+  button { font: inherit; color: inherit; }
+  button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 3px solid var(--campo); outline-offset: 2px; }
+
+  /* ---------- Cabeza: buscador + último apunte, una sola pieza ---------- */
+  #cabeza {
+    background: var(--superficie);
+    border: 1px solid var(--linea);
+    border-radius: 1rem;
+    overflow: hidden;
   }
-  header h1 { font-size: 1.25rem; font-weight: 500; margin: 0; letter-spacing: .01em; }
-  #estado {
-    margin-left: auto;
-    font-size: .875rem; color: var(--tenue);
-    padding: .25rem .625rem; border-radius: 1rem;
-    border: 1px solid transparent;
-    background: none; font-family: inherit;
+  .buscador { display: flex; align-items: center; gap: .125rem; padding: .25rem .25rem .25rem .75rem; }
+  .buscador svg.lupa { flex: none; color: var(--tenue); }
+  #buscar {
+    flex: 1; min-width: 0;
+    border: 0; background: none; color: var(--tinta);
+    font: inherit; font-size: 1rem; padding: .625rem .5rem;
   }
-  #estado.pendiente { color: var(--tierra); background: var(--tierra-suave); border-color: var(--tierra); }
-  #estado.sin-red { color: var(--tenue); border-color: var(--linea); }
-  .icono-btn {
-    width: 3rem; height: 3rem; border: 0; background: none; color: var(--tenue);
+  #buscar:focus-visible { outline: none; }
+  #buscar::placeholder { color: var(--tenue); }
+  #cuenta { flex: none; font-size: .8125rem; color: var(--tenue); font-variant-numeric: tabular-nums; padding: 0 .25rem; }
+  .ico {
+    flex: none; width: 2.5rem; height: 2.5rem; border: 0; background: none; color: var(--tenue);
     border-radius: 50%; display: grid; place-items: center; cursor: pointer;
   }
-  .icono-btn:focus-visible, button:focus-visible, textarea:focus-visible, input:focus-visible {
-    outline: 3px solid var(--campo); outline-offset: 2px;
-  }
+  .ico:disabled { opacity: .35; }
+  .ico[hidden] { display: none; }
 
-  #escribir {
-    height: calc(100dvh - var(--cabecera) - var(--asomo) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
-    min-height: 15rem;
-    display: flex; flex-direction: column; gap: .75rem;
-    padding: 0 1rem .75rem;
+  #ultimo {
+    display: grid; grid-template-columns: 1fr auto; align-items: center; gap: .5rem;
+    width: 100%; text-align: left;
+    border: 0; border-top: 1px solid var(--linea); background: none;
+    padding: .625rem .5rem .625rem .875rem; cursor: pointer;
   }
-  body.escribiendo #escribir { height: calc(100dvh - var(--cabecera) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); }
+  #ultimo.destello { animation: destello 1.2s ease-out; }
+  @keyframes destello { from { background: var(--campo-suave); } to { background: transparent; } }
+  #ultimo-meta { display: block; font-size: .8125rem; color: var(--tenue); }
+  #ultimo-meta.ok { color: var(--campo); }
+  #ultimo-meta.pend { color: var(--tierra); }
+  #ultimo-meta.fallo { color: var(--fallo); }
+  #ultimo-texto {
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    word-break: break-word;
+  }
+  #ultimo-texto.vacio { color: var(--tenue); }
+  .flecha { width: 2.5rem; height: 2.5rem; display: grid; place-items: center; color: var(--tenue); transition: transform .2s ease; }
+  body.abierto .flecha { transform: rotate(180deg); }
+
+  /* ---------- Centro: cuadro de dictar, con la lista desplegable encima ---------- */
+  #centro { position: relative; min-height: 0; }
   textarea {
-    flex: 1;
-    width: 100%;
+    width: 100%; height: 100%;
     resize: none;
     font: inherit; font-size: 1.25rem; line-height: 1.5;
     color: var(--tinta); background: var(--superficie);
-    border: 1px solid var(--linea); border-radius: .75rem;
+    border: 1px solid var(--linea); border-radius: 1rem;
     padding: 1rem;
   }
   textarea::placeholder { color: var(--tenue); }
+  #lista {
+    position: absolute; inset: 0;
+    background: var(--superficie);
+    border: 1px solid var(--linea); border-radius: 1rem;
+    overflow-y: auto; overscroll-behavior: contain;
+    padding: .25rem 1rem 1rem;
+  }
+  #lista[hidden] { display: none; }
+  .dia {
+    position: sticky; top: 0; z-index: 1;
+    text-align: center; font-size: .8125rem; color: var(--tenue);
+    background: var(--superficie); padding: .625rem 0 .375rem;
+  }
+  .nota { padding: .5rem 0; border-top: 1px solid var(--linea); scroll-margin: 3rem 0 1rem; }
+  .dia + .nota { border-top: 0; }
+  .nota .meta { font-size: .8125rem; color: var(--tenue); font-variant-numeric: tabular-nums; }
+  .nota.pend .meta { color: var(--tierra); }
+  .nota .texto { white-space: pre-wrap; word-break: break-word; }
+  .nota.actual { background: var(--campo-suave); margin: 0 -1rem; padding: .5rem 1rem; }
+  mark { background: var(--marca); color: inherit; border-radius: .2rem; }
+  .nota.actual mark { background: var(--marca-actual); }
+  .lista-vacia { color: var(--tenue); padding: 1.5rem 0; text-align: center; }
+
+  /* ---------- Pie ---------- */
   #guardar {
-    flex: none;
-    height: 4.25rem;
+    height: 4.25rem; width: 100%;
     border: 0; border-radius: 2.125rem;
     background: var(--campo); color: var(--campo-tinta);
-    font: inherit; font-size: 1.25rem; font-weight: 500; letter-spacing: .02em;
+    font-size: 1.25rem; font-weight: 500; letter-spacing: .02em;
     cursor: pointer;
     transition: transform .08s ease;
   }
   #guardar:active { transform: scale(.98); }
-  #guardar:disabled { opacity: .55; }
+  body.buscando #pie { display: none; }
 
-  main { padding: 0 1rem 2rem; }
-  #resultado { margin: 0 0 1rem; padding: .875rem 1rem; border-radius: .75rem; border-left: 4px solid; }
-  #resultado[hidden] { display: none; }
-  #resultado.ok { background: var(--campo-suave); border-color: var(--campo); }
-  #resultado.espera { background: var(--superficie); border-color: var(--linea); color: var(--tenue); }
-  #resultado.fallo { background: var(--fallo-suave); border-color: var(--fallo); }
-  #resultado strong { display: block; font-weight: 500; margin-bottom: .25rem; }
-  #resultado .fallo-titulo { color: var(--fallo); }
-  #resultado .detalle { font-size: .9375rem; color: var(--tenue); }
-  #resultado .citado { margin-top: .375rem; white-space: pre-wrap; word-break: break-word; }
-
-  #aviso-pendientes {
-    display: flex; align-items: center; gap: .75rem;
-    margin: 0 0 1rem; padding: .75rem 1rem; border-radius: .75rem;
-    background: var(--tierra-suave); color: var(--tierra);
-  }
-  #aviso-pendientes[hidden] { display: none; }
-  #aviso-pendientes span { flex: 1; }
-  .btn-texto {
-    border: 1px solid currentColor; background: none; color: inherit;
-    font: inherit; font-weight: 500; padding: .5rem .875rem; border-radius: 1.25rem; cursor: pointer;
-  }
-
-  .seccion-titulo { display: flex; align-items: baseline; gap: .5rem; margin: .25rem 0 .5rem; }
-  .seccion-titulo h2 { font-size: 1rem; font-weight: 500; margin: 0; }
-  .seccion-titulo small { color: var(--tenue); font-size: .8125rem; margin-left: auto; }
-  #hoy { list-style: none; margin: 0; padding: 0; }
-  #hoy li {
-    display: grid; grid-template-columns: 3.25rem 1fr; gap: .5rem;
-    padding: .625rem 0; border-top: 1px solid var(--linea);
-  }
-  #hoy li:first-child { border-top: 0; }
-  #hoy .hora { color: var(--tenue); font-variant-numeric: tabular-nums; }
-  #hoy .texto { white-space: pre-wrap; word-break: break-word; }
-  #hoy .marca { display: block; font-size: .8125rem; color: var(--tenue); }
-  #hoy li.pend .marca { color: var(--tierra); }
-  #hoy .vacio { display: block; color: var(--tenue); padding: .5rem 0; border: 0; }
-
+  /* ---------- Ajustes ---------- */
   dialog {
     width: min(32rem, calc(100vw - 2rem));
     border: 0; border-radius: 1.25rem; padding: 1.25rem;
@@ -162,37 +168,49 @@
   #prueba.ok { color: var(--campo); }
   #prueba.fallo { color: var(--fallo); }
   .botones { display: flex; gap: .5rem; justify-content: flex-end; margin-top: 1rem; flex-wrap: wrap; }
-  .btn-lleno {
-    border: 0; background: var(--campo); color: var(--campo-tinta);
-    font: inherit; font-weight: 500; padding: .625rem 1.25rem; border-radius: 1.25rem; cursor: pointer;
-  }
-  .btn-plano { border: 0; background: none; color: var(--campo); font: inherit; font-weight: 500; padding: .625rem 1rem; border-radius: 1.25rem; cursor: pointer; }
-  @media (prefers-reduced-motion: reduce) { #guardar { transition: none; } }
+  .btn-lleno { border: 0; background: var(--campo); color: var(--campo-tinta); font-weight: 500; padding: .625rem 1.25rem; border-radius: 1.25rem; cursor: pointer; }
+  .btn-plano { border: 0; background: none; color: var(--campo); font-weight: 500; padding: .625rem 1rem; border-radius: 1.25rem; cursor: pointer; }
+  @media (prefers-reduced-motion: reduce) { #guardar, .flecha { transition: none; } #ultimo.destello { animation: none; } }
 </style>
 </head>
 <body>
-<header>
-  <h1>Apunta</h1>
-  <button id="estado" type="button" aria-live="polite"></button>
-  <button class="icono-btn" id="abrir-ajustes" type="button" aria-label="Ajustes">
-    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.3 7.3 0 0 0-1.7-1l-.4-2.6h-4l-.4 2.7a7.3 7.3 0 0 0-1.7 1l-2.5-1-2 3.4L6.6 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1c.5.4 1.1.7 1.7 1l.4 2.7h4l.4-2.7c.6-.3 1.2-.6 1.7-1l2.5 1 2-3.5L19.4 13ZM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z"/></svg>
+<header id="cabeza">
+  <div class="buscador">
+    <svg class="lupa" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.5 14h-.8l-.3-.3A6.5 6.5 0 1 0 14 15.5l.3.3v.8l5 5 1.5-1.5-5-5Zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9Z"/></svg>
+    <input id="buscar" type="text" placeholder="Buscar en todo lo dicho" autocomplete="off" spellcheck="false" enterkeyhint="search" aria-label="Buscar en los apuntes">
+    <span id="cuenta" aria-live="polite"></span>
+    <button class="ico" id="mas-antiguo" type="button" aria-label="Coincidencia anterior" hidden>
+      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m7.4 15.4 4.6-4.6 4.6 4.6L18 14l-6-6-6 6z"/></svg>
+    </button>
+    <button class="ico" id="mas-nuevo" type="button" aria-label="Coincidencia siguiente" hidden>
+      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7.4 8.6 12 13.2l4.6-4.6L18 10l-6 6-6-6z"/></svg>
+    </button>
+    <button class="ico" id="limpiar" type="button" aria-label="Borrar búsqueda" hidden>
+      <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19l5.6-5.6 5.6 5.6 1.4-1.4-5.6-5.6z"/></svg>
+    </button>
+    <button class="ico" id="abrir-ajustes" type="button" aria-label="Ajustes">
+      <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.3 7.3 0 0 0-1.7-1l-.4-2.6h-4l-.4 2.7a7.3 7.3 0 0 0-1.7 1l-2.5-1-2 3.4L6.6 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1c.5.4 1.1.7 1.7 1l.4 2.7h4l.4-2.7c.6-.3 1.2-.6 1.7-1l2.5 1 2-3.5L19.4 13ZM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z"/></svg>
+    </button>
+  </div>
+  <button id="ultimo" type="button" aria-expanded="false" aria-controls="lista">
+    <span>
+      <span id="ultimo-meta"></span>
+      <span id="ultimo-texto" class="vacio">Aún no hay apuntes</span>
+    </span>
+    <span class="flecha" aria-hidden="true">
+      <svg width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M7.4 8.6 12 13.2l4.6-4.6L18 10l-6 6-6-6z"/></svg>
+    </span>
   </button>
 </header>
 
-<section id="escribir">
+<section id="centro">
   <textarea id="texto" placeholder="Toca aquí y dicta con el micrófono del teclado" aria-label="Apunte"></textarea>
-  <button id="guardar" type="button">Guardar</button>
+  <div id="lista" role="log" aria-label="Todos los apuntes" hidden></div>
 </section>
 
-<main>
-  <div id="resultado" role="status" aria-live="polite" hidden></div>
-  <div id="aviso-pendientes" hidden>
-    <span id="aviso-texto"></span>
-    <button class="btn-texto" id="enviar-ya" type="button">Enviar ahora</button>
-  </div>
-  <div class="seccion-titulo"><h2>Hoy</h2><small id="hoy-actualizado"></small></div>
-  <ul id="hoy"></ul>
-</main>
+<footer id="pie">
+  <button id="guardar" type="button">Guardar</button>
+</footer>
 
 <dialog id="ajustes">
   <h2>Conexión con la hoja</h2>
@@ -213,79 +231,183 @@
 <script>
 const $ = (id) => document.getElementById(id);
 const texto = $('texto');
+const lista = $('lista');
 
 const MENSAJES = {
-  red: 'Sin conexión. El apunte está guardado en el móvil y se enviará al volver la señal.',
-  tiempo: 'La hoja no ha respondido a tiempo. El apunte sigue en el móvil y se reintentará (si llegó a escribirse, no se duplicará).',
-  clave: 'La hoja rechaza la clave. Corrígela en Ajustes. El apunte sigue guardado en el móvil.',
-  sin_config: 'Falta la dirección del script o la clave. Ponlas en Ajustes. El apunte sigue guardado en el móvil.',
-  respuesta_rara: 'El script no responde como debe. Comprueba que está publicado con acceso «Cualquier usuario». El apunte sigue en el móvil.',
-  script: 'El script ha dado un error al escribir. El apunte sigue en el móvil.',
-  vacio: 'El apunte llegó vacío y la hoja no lo ha guardado.',
-  fecha: 'La fecha del apunte no es válida y la hoja no lo ha guardado.'
+  red: 'Sin conexión. Está guardado en el móvil y se enviará solo al volver la señal.',
+  tiempo: 'La hoja no ha respondido a tiempo. Sigue en el móvil y se reintentará (si llegó a escribirse, no se duplicará).',
+  clave: 'La hoja rechaza la clave. Corrígela en Ajustes (rueda dentada). Sigue guardado en el móvil.',
+  sin_config: 'Falta la dirección del script o la clave. Ponlas en Ajustes (rueda dentada). Sigue guardado en el móvil.',
+  respuesta_rara: 'El script no responde como debe (¿publicado con acceso «Cualquier usuario»?). Sigue guardado en el móvil.',
+  script: 'El script ha dado un error al escribir. Sigue guardado en el móvil.',
+  vacio: 'Llegó vacío y la hoja no lo ha guardado.',
+  fecha: 'La fecha no es válida y la hoja no lo ha guardado.'
 };
-const CORTO = { red: 'sin conexión', tiempo: 'la hoja no respondió a tiempo', clave: 'clave incorrecta', sin_config: 'falta configurar la conexión', respuesta_rara: 'el script no responde bien', script: 'error del script' };
-const explicar = (e) => (MENSAJES[e.codigo] || ('Error desconocido (' + (e.codigo || e.message) + '). El apunte sigue en el móvil.')) + (e.detalle ? ' Detalle: ' + e.detalle : '');
+const DE_RED = ['red', 'tiempo'];
+const explicar = (e) => (MENSAJES[e.codigo] || ('Error desconocido (' + (e.codigo || e.message) + '). Sigue guardado en el móvil.')) + (e.detalle ? ' Detalle: ' + e.detalle : '');
 
 function esc(s) { return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
-const horaDe = (iso) => new Date(iso).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-const fechaHoraDe = (iso) => new Date(iso).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-
-// ---------- Pantalla ----------
-function mostrarResultado(tipo, html) {
-  const r = $('resultado');
-  r.className = tipo; r.innerHTML = html; r.hidden = false;
+function diaLocal(fecha) {
+  const d = new Date(fecha);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+const hora = (iso) => new Date(iso).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+function nombreDia(iso) {
+  const d = new Date(iso), hoy = new Date();
+  const ayer = new Date(); ayer.setDate(hoy.getDate() - 1);
+  if (diaLocal(d) === diaLocal(hoy)) return 'Hoy';
+  if (diaLocal(d) === diaLocal(ayer)) return 'Ayer';
+  const opciones = { weekday: 'long', day: 'numeric', month: 'long' };
+  if (d.getFullYear() !== hoy.getFullYear()) opciones.year = 'numeric';
+  const t = d.toLocaleDateString('es-ES', opciones);
+  return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
-async function pintar() {
-  const pendientes = await Cola.todos();
-  const n = pendientes.length;
+// ---------- Datos que se ven: copia de la hoja + pendientes ----------
+let elementos = [];          // ordenados del más antiguo al más reciente
+let estadoUltimo = null;     // { tipo: 'ok'|'pend'|'enviando'|'fallo', texto, meta }
 
-  const estado = $('estado');
-  if (n > 0) { estado.textContent = n === 1 ? '1 pendiente' : n + ' pendientes'; estado.className = 'pendiente'; }
-  else if (!navigator.onLine) { estado.textContent = 'Sin red'; estado.className = 'sin-red'; }
-  else { estado.textContent = 'Todo en la hoja'; estado.className = ''; }
+async function cargar() {
+  const [notas, pend] = await Promise.all([Notas.todas(), Cola.todos()]);
+  const a = notas.map((n) => ({ clave: 'f' + n.fila, fila: n.fila, fecha: n.fecha, fechaHoja: n.fechaHoja, texto: n.texto }));
+  const b = pend.map((p) => ({ clave: 'p' + p.id, fecha: p.fecha, texto: p.texto, pend: true, error: p.ultimoError }));
+  elementos = a.concat(b).sort((x, y) => (x.fecha || '').localeCompare(y.fecha || '') || ((x.fila || 1e9) - (y.fila || 1e9)));
+  elementos.forEach((el) => { el.norm = normalizar(el.texto); });
+  return pend;
+}
 
-  $('aviso-pendientes').hidden = n === 0;
-  if (n > 0) {
-    const err = pendientes[0].ultimoError;
-    const motivo = err ? ' Último intento: ' + (CORTO[err] || err) + '.' : '';
-    $('aviso-texto').textContent = (n === 1 ? 'Queda 1 apunte' : 'Quedan ' + n + ' apuntes') + ' en el móvil sin llegar a la hoja.' + motivo;
+// ---------- Último apunte (la tira bajo el buscador) ----------
+async function pintarUltimo() {
+  const pend = elementos.filter((e) => e.pend);
+  const ultimo = elementos[elementos.length - 1];
+  const meta = $('ultimo-meta'), txt = $('ultimo-texto');
+  const extra = pend.length > 1 ? ' · ' + pend.length + ' pendientes' : '';
+
+  if (estadoUltimo) {
+    meta.className = estadoUltimo.tipo;
+    meta.textContent = estadoUltimo.meta + (estadoUltimo.tipo === 'pend' ? extra : '');
+    txt.className = ''; txt.textContent = estadoUltimo.texto;
+    return;
   }
+  if (!ultimo) { meta.className = ''; meta.textContent = ''; txt.className = 'vacio'; txt.textContent = 'Aún no hay apuntes'; return; }
+  txt.className = ''; txt.textContent = ultimo.texto;
+  const cuando = ultimo.fecha ? nombreDia(ultimo.fecha) + ', ' + hora(ultimo.fecha) : (ultimo.fechaHoja || '');
+  if (ultimo.pend) {
+    meta.className = 'pend';
+    meta.textContent = cuando + ' · pendiente de enviar' + extra;
+  } else {
+    meta.className = pend.length ? 'pend' : '';
+    meta.textContent = cuando + ' · en la hoja, fila ' + ultimo.fila + (pend.length ? ' · ' + pend.length + (pend.length === 1 ? ' pendiente' : ' pendientes') : '');
+  }
+}
 
-  const guardadoHoy = await Ajustes.leer('hoy');
-  const deHoja = guardadoHoy && guardadoHoy.dia === diaLocal() ? guardadoHoy.lista : [];
-  const pendHoy = pendientes.filter((p) => diaLocal(p.fecha) === diaLocal()).reverse();
+function destello() {
+  const u = $('ultimo');
+  u.classList.remove('destello'); void u.offsetWidth; u.classList.add('destello');
+}
 
-  const filas = [];
-  pendHoy.forEach((p) => filas.push(
-    '<li class="pend"><span class="hora">' + horaDe(p.fecha) + '</span><span><span class="texto">' + esc(p.texto) + '</span><span class="marca">Pendiente de enviar</span></span></li>'));
-  deHoja.forEach((a) => filas.push(
-    '<li><span class="hora">' + esc(a.hora) + '</span><span><span class="texto">' + esc(a.texto) + '</span><span class="marca">En la hoja, fila ' + a.fila + '</span></span></li>'));
-  $('hoy').innerHTML = filas.length ? filas.join('') : '<li class="vacio">Aún no hay apuntes hoy.</li>';
+// ---------- Lista desplegable ----------
+let abierta = false;
+function abrirLista(si) {
+  abierta = si;
+  lista.hidden = !si;
+  document.body.classList.toggle('abierto', si);
+  $('ultimo').setAttribute('aria-expanded', String(si));
+  if (si) { pintarLista(); if (!coincidencias.length) lista.scrollTop = lista.scrollHeight; }
+}
 
-  const act = await Ajustes.leer('hoyActualizado');
-  $('hoy-actualizado').textContent = act && diaLocal(act) === diaLocal() ? 'Leído de la hoja a las ' + horaDe(act) : '';
+function pintarLista() {
+  if (!elementos.length) { lista.innerHTML = '<p class="lista-vacia">Aún no hay apuntes.</p>'; return; }
+  const q = consulta();
+  const actual = coincidencias[indice];
+  let html = '', diaAnterior = null;
+  for (const el of elementos) {
+    const dia = el.fecha ? nombreDia(el.fecha) : 'Sin fecha';
+    if (dia !== diaAnterior) { html += '<div class="dia">' + esc(dia) + '</div>'; diaAnterior = dia; }
+    const cuando = el.fecha ? hora(el.fecha) : esc(el.fechaHoja || '');
+    const estado = el.pend ? 'pendiente de enviar' : 'fila ' + el.fila;
+    const clases = 'nota' + (el.pend ? ' pend' : '') + (actual && actual.clave === el.clave ? ' actual' : '');
+    html += '<div class="' + clases + '" id="n-' + el.clave + '"><div class="meta">' + cuando + ' · ' + estado + '</div><div class="texto">' + resaltar(el, q) + '</div></div>';
+  }
+  lista.innerHTML = html;
+}
+
+// ---------- Búsqueda (sin distinguir mayúsculas ni tildes) ----------
+function normalizar(s) {
+  let t = '';
+  const mapa = [];
+  for (let i = 0; i < s.length; i++) {
+    const n = s[i].normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    for (const c of n) { t += c; mapa.push(i); }
+  }
+  return { t, mapa };
+}
+const consulta = () => normalizar($('buscar').value.trim()).t;
+
+function resaltar(el, q) {
+  if (!q || q.length < 2 || !el.norm.t.includes(q)) return esc(el.texto);
+  let html = '', desde = 0, pos = el.norm.t.indexOf(q);
+  while (pos !== -1) {
+    const ini = el.norm.mapa[pos];
+    const fin = el.norm.mapa[pos + q.length - 1] + 1;
+    html += esc(el.texto.slice(desde, ini)) + '<mark>' + esc(el.texto.slice(ini, fin)) + '</mark>';
+    desde = fin;
+    pos = el.norm.t.indexOf(q, pos + q.length);
+  }
+  return html + esc(el.texto.slice(desde));
+}
+
+let coincidencias = [];   // de la más reciente a la más antigua
+let indice = 0;
+function buscar() {
+  const bruto = $('buscar').value;
+  const q = consulta();
+  $('limpiar').hidden = !bruto;
+  coincidencias = q.length >= 2 ? elementos.filter((el) => el.norm.t.includes(q)).reverse() : [];
+  indice = 0;
+  const hay = q.length >= 2;
+  $('mas-antiguo').hidden = $('mas-nuevo').hidden = !hay;
+  if (hay && !abierta) abrirLista(true);
+  irA(0);
+}
+function irA(i) {
+  const n = coincidencias.length;
+  const q = consulta();
+  if (q.length < 2) { $('cuenta').textContent = ''; if (abierta) pintarLista(); return; }
+  if (!n) { $('cuenta').textContent = 'Sin resultados'; $('mas-antiguo').disabled = $('mas-nuevo').disabled = true; pintarLista(); return; }
+  indice = Math.max(0, Math.min(n - 1, i));
+  $('cuenta').textContent = (indice + 1) + ' de ' + n;
+  $('mas-antiguo').disabled = indice >= n - 1;
+  $('mas-nuevo').disabled = indice <= 0;
+  pintarLista();
+  const nodo = document.getElementById('n-' + coincidencias[indice].clave);
+  if (nodo) nodo.scrollIntoView({ block: 'center' });
+}
+function limpiarBusqueda() {
+  $('buscar').value = '';
+  buscar();
+  if (abierta) lista.scrollTop = lista.scrollHeight;
 }
 
 // ---------- Guardar ----------
 async function guardar() {
   const contenido = texto.value.trim();
-  if (!contenido) { texto.focus(); return; }
+  if (!contenido) { if (abierta) abrirLista(false); texto.focus(); return; }
 
   const apunte = { id: crypto.randomUUID(), fecha: new Date().toISOString(), texto: contenido };
   try {
     await Cola.meter(apunte);          // primero al móvil: así nunca se pierde
   } catch (e) {
-    mostrarResultado('fallo', '<strong class="fallo-titulo">No se ha podido guardar ni en el móvil</strong><span class="detalle">El texto sigue en el cuadro. Cópialo antes de cerrar la app.</span>');
+    estadoUltimo = { tipo: 'fallo', meta: 'No se ha podido guardar ni en el móvil. El texto sigue en el cuadro: cópialo.', texto: contenido };
+    pintarUltimo();
     return;
   }
   texto.value = '';
   texto.blur();
-  $('guardar').disabled = true;
-  mostrarResultado('espera', '<strong>Enviando a la hoja…</strong><div class="citado">' + esc(contenido) + '</div>');
+  if (abierta) abrirLista(false);
+  estadoUltimo = { tipo: 'enviando', meta: 'Enviando a la hoja…', texto: contenido };
+  await cargar(); pintarUltimo();
   pedirEnvioEnSegundoPlano();
-  await pintar();
 
   let r = await enviarPendientes();
   let mio = r.enviados.find((x) => x.id === apunte.id);
@@ -294,49 +416,53 @@ async function guardar() {
     r = await enviarPendientes();
     mio = r.enviados.find((x) => x.id === apunte.id);
   }
-  $('guardar').disabled = false;
+  await cargar();
   if (mio) {
-    await Ajustes.guardar('hoyActualizado', new Date().toISOString());
-    mostrarResultado('ok',
-      '<strong>Guardado en la hoja, fila ' + mio.fila + (mio.repetido ? ' (ya estaba, no se ha duplicado)' : '') + '</strong>' +
-      '<span class="detalle">' + esc(mio.fechaHoja) + '</span>' +
-      '<div class="citado">' + esc(mio.textoHoja) + '</div>');
+    estadoUltimo = { tipo: 'ok', meta: 'En la hoja, fila ' + mio.fila + ' · ' + mio.fechaHoja + (mio.repetido ? ' (ya estaba, no se ha duplicado)' : ''), texto: mio.textoHoja };
+    destello();
   } else if (r.error) {
-    mostrarResultado('fallo', '<strong class="fallo-titulo">No ha llegado a la hoja</strong><span class="detalle">' + esc(explicar(r.error)) + '</span>');
+    estadoUltimo = DE_RED.includes(r.error.codigo)
+      ? { tipo: 'pend', meta: 'Sin conexión: guardado en el móvil, se enviará solo', texto: contenido }
+      : { tipo: 'fallo', meta: 'No ha llegado a la hoja. ' + explicar(r.error), texto: contenido };
   } else {
-    mostrarResultado('espera', '<strong>En el móvil, pendiente de enviar</strong>');
+    estadoUltimo = { tipo: 'pend', meta: 'En el móvil, pendiente de enviar', texto: contenido };
   }
-  await pintar();
+  pintarUltimo();
+  if (abierta) pintarLista();
 }
 
-// ---------- Envíos automáticos ----------
-let ultimoAvisoEnvio = 0;
-async function reintentar(manual) {
+// ---------- Envíos y copia de la hoja ----------
+async function ponerseAlDia(manual) {
   const pend = await Cola.todos();
-  if (!pend.length) return;
-  if (!manual && !navigator.onLine) return;
-  const r = await enviarPendientes();
-  if (r.enviados.length) {
-    await Ajustes.guardar('hoyActualizado', new Date().toISOString());
-    const ultimo = r.enviados[r.enviados.length - 1];
-    mostrarResultado('ok', '<strong>' + (r.enviados.length === 1 ? 'Enviado 1 apunte pendiente' : 'Enviados ' + r.enviados.length + ' apuntes pendientes') + '</strong>' +
-      '<span class="detalle">Último: fila ' + ultimo.fila + ', ' + esc(ultimo.fechaHoja) + '</span><div class="citado">' + esc(ultimo.textoHoja) + '</div>');
-  } else if (r.error && (manual || Date.now() - ultimoAvisoEnvio > 60000)) {
-    ultimoAvisoEnvio = Date.now();
-    if (manual) mostrarResultado('fallo', '<strong class="fallo-titulo">Sigue sin llegar a la hoja</strong><span class="detalle">' + esc(explicar(r.error)) + '</span>');
+  if (pend.length && (manual || navigator.onLine)) {
+    const r = await enviarPendientes();
+    if (r.enviados.length) {
+      const ultimo = r.enviados[r.enviados.length - 1];
+      estadoUltimo = { tipo: 'ok', meta: (r.enviados.length === 1 ? 'Enviado el apunte pendiente' : 'Enviados ' + r.enviados.length + ' apuntes pendientes') + ' · último en la fila ' + ultimo.fila, texto: ultimo.textoHoja };
+      destello();
+    } else if (r.error && manual) {
+      estadoUltimo = DE_RED.includes(r.error.codigo)
+        ? { tipo: 'pend', meta: 'Sin conexión: guardado en el móvil, se enviará solo', texto: pend[pend.length - 1].texto }
+        : { tipo: 'fallo', meta: 'No llega a la hoja. ' + explicar(r.error), texto: pend[pend.length - 1].texto };
+    }
   }
-  await pintar();
+  // Copia de la hoja: al abrir, al pedirlo, o si la última tiene más de 5 minutos (para no gastar cuota del script).
+  const copiado = await Ajustes.leer('copiadoA');
+  const vieja = !copiado || Date.now() - new Date(copiado).getTime() > 5 * 60 * 1000;
+  if (navigator.onLine && (manual || vieja) && !(await Cola.todos()).length) {
+    try { await copiarHoja(); } catch (e) { /* sin red o sin configurar: se usa la copia que haya */ }
+  }
+  await refrescar();
 }
 
-async function refrescarHoy() {
-  if (!navigator.onLine) return;
-  if ((await Cola.todos()).length) return; // primero que se vacíe la cola
-  try {
-    const r = await llamarScript({ accion: 'hoy' });
-    await Ajustes.guardar('hoy', { dia: diaLocal(), lista: r.hoy });
-    await Ajustes.guardar('hoyActualizado', new Date().toISOString());
-    await pintar();
-  } catch (e) { /* sin red o sin configurar: se queda lo último guardado */ }
+async function refrescar() {
+  await cargar();
+  pintarUltimo();
+  if (abierta) {
+    const abajo = lista.scrollTop + lista.clientHeight >= lista.scrollHeight - 20;
+    if ($('buscar').value.trim()) buscar();
+    else { pintarLista(); if (abajo) lista.scrollTop = lista.scrollHeight; }
+  }
 }
 
 async function pedirEnvioEnSegundoPlano() {
@@ -370,14 +496,13 @@ async function probar() {
   if (!(await guardarAjustes())) return;
   $('prueba').className = ''; $('prueba').textContent = 'Probando…';
   try {
-    const r = await llamarScript({ accion: 'hoy' });
-    await Ajustes.guardar('hoy', { dia: diaLocal(), lista: r.hoy });
-    await Ajustes.guardar('hoyActualizado', new Date().toISOString());
+    const nuevas = await copiarHoja();
     $('prueba').className = 'ok';
-    $('prueba').textContent = 'Conectado con la hoja. Apuntes de hoy en ella: ' + r.hoy.length + '.';
-    await pintar();
+    $('prueba').textContent = 'Conectado con la hoja. Copiados al móvil ' + nuevas + ' apuntes nuevos.';
+    estadoUltimo = null;
+    await refrescar();
   } catch (e) {
-    $('prueba').className = 'fallo'; $('prueba').textContent = explicar(e).replace(/ El apunte.*$/, '');
+    $('prueba').className = 'fallo'; $('prueba').textContent = explicar(e).replace(/ Sigue guardado.*$/, '');
   }
 }
 
@@ -386,22 +511,32 @@ async function probar() {
 $('guardar').addEventListener('pointerdown', (e) => e.preventDefault());
 $('guardar').addEventListener('mousedown', (e) => e.preventDefault());
 $('guardar').addEventListener('click', guardar);
-$('enviar-ya').addEventListener('click', () => reintentar(true));
-$('estado').addEventListener('click', () => reintentar(true));
+$('ultimo').addEventListener('click', () => {
+  if (estadoUltimo && estadoUltimo.tipo !== 'fallo') estadoUltimo = null;
+  abrirLista(!abierta);
+  pintarUltimo();
+  if (abierta) ponerseAlDia(true);
+});
+$('buscar').addEventListener('input', () => { clearTimeout(window.__t); window.__t = setTimeout(buscar, 150); });
+$('buscar').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); irA(indice + 1); } });
+$('buscar').addEventListener('focus', () => document.body.classList.add('buscando'));
+$('buscar').addEventListener('blur', () => document.body.classList.remove('buscando'));
+$('mas-antiguo').addEventListener('click', () => irA(indice + 1));
+$('mas-nuevo').addEventListener('click', () => irA(indice - 1));
+$('limpiar').addEventListener('click', limpiarBusqueda);
 $('abrir-ajustes').addEventListener('click', abrirAjustes);
 $('cerrar-ajustes').addEventListener('click', () => $('ajustes').close());
 $('probar').addEventListener('click', probar);
-$('guardar-ajustes').addEventListener('click', async () => { if (await guardarAjustes()) { $('ajustes').close(); reintentar(true); refrescarHoy(); } });
-texto.addEventListener('focus', () => document.body.classList.add('escribiendo'));
-texto.addEventListener('blur', () => document.body.classList.remove('escribiendo'));
-window.addEventListener('online', () => { pintar(); reintentar(false).then(refrescarHoy); });
-window.addEventListener('offline', pintar);
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { pintar(); reintentar(false).then(refrescarHoy); } });
-setInterval(() => reintentar(false), 30000);
+$('guardar-ajustes').addEventListener('click', async () => { if (await guardarAjustes()) { $('ajustes').close(); ponerseAlDia(true); } });
+texto.addEventListener('focus', () => { if (abierta) abrirLista(false); });
+window.addEventListener('online', () => ponerseAlDia(false));
+window.addEventListener('offline', refrescar);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') ponerseAlDia(false); });
+setInterval(() => ponerseAlDia(false), 30000);
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js');
-  navigator.serviceWorker.addEventListener('message', (e) => { if (e.data && e.data.tipo === 'sincronizado') pintar(); });
+  navigator.serviceWorker.addEventListener('message', (e) => { if (e.data && e.data.tipo === 'sincronizado') { estadoUltimo = null; refrescar(); } });
 }
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
 
@@ -413,10 +548,9 @@ if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
     await Ajustes.guardar('clave', enlace.get('clave'));
     history.replaceState(null, '', location.pathname);
   }
-  await pintar();
+  await refrescar();
   if (!(await Ajustes.leer('url'))) { abrirAjustes(); return; }
-  await reintentar(false);
-  await refrescarHoy();
+  await ponerseAlDia(true);
 })();
 </script>
 </body>

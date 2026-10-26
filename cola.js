@@ -1,7 +1,7 @@
-// Apunta — almacenamiento en el móvil (IndexedDB) y envío a la hoja.
-// Lo usan tanto la página como el service worker (envío en segundo plano).
+// Cartapacio — datos en el móvil (IndexedDB) y comunicación con la hoja.
+// Lo usan la página y el service worker (envío en segundo plano).
 
-const BD_NOMBRE = 'apunta';
+const BD_NOMBRE = 'cartapacio';
 const BD_VERSION = 1;
 
 function abrirBD() {
@@ -10,6 +10,7 @@ function abrirBD() {
     pet.onupgradeneeded = () => {
       const bd = pet.result;
       if (!bd.objectStoreNames.contains('pendientes')) bd.createObjectStore('pendientes', { keyPath: 'id' });
+      if (!bd.objectStoreNames.contains('notas')) bd.createObjectStore('notas', { keyPath: 'fila' });
       if (!bd.objectStoreNames.contains('ajustes')) bd.createObjectStore('ajustes');
     };
     pet.onsuccess = () => resolve(pet.result);
@@ -42,6 +43,22 @@ const Cola = {
       const s = tx.objectStore('pendientes');
       const g = s.get(id);
       g.onsuccess = () => { if (g.result) { g.result.ultimoError = error; s.put(g.result); } };
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+};
+
+// Copia en el móvil de todas las filas de la hoja (para ver y buscar sin cobertura).
+const Notas = {
+  todas: () => op('notas', 'readonly', (s) => s.getAll()).then((l) => l || []),
+  async poner(lista) {
+    if (!lista.length) return;
+    const bd = await abrirBD();
+    return new Promise((resolve, reject) => {
+      const tx = bd.transaction('notas', 'readwrite');
+      const s = tx.objectStore('notas');
+      lista.forEach((n) => s.put(n));
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
     });
@@ -99,8 +116,8 @@ function enviarPendientes() {
     for (const apunte of await Cola.todos()) {
       try {
         const r = await llamarScript({ accion: 'guardar', id: apunte.id, fecha: apunte.fecha, texto: apunte.texto });
+        await Notas.poner([{ fila: r.fila, fecha: r.fecha || apunte.fecha, fechaHoja: r.fechaHoja, texto: r.textoHoja }]);
         await Cola.quitar(apunte.id);
-        if (r.hoy) await Ajustes.guardar('hoy', { dia: diaLocal(), lista: r.hoy });
         enviados.push(r);
       } catch (e) {
         error = e;
@@ -115,7 +132,24 @@ function enviarPendientes() {
   return enviando;
 }
 
-function diaLocal(fecha) {
-  const d = fecha ? new Date(fecha) : new Date();
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+// Trae de la hoja las filas que el móvil aún no tiene (la hoja solo crece).
+let copiando = null;
+function copiarHoja() {
+  if (copiando) return copiando;
+  copiando = (async () => {
+    let desde = (await Ajustes.leer('ultimaFila')) || 0;
+    let nuevas = 0;
+    for (let vuelta = 0; vuelta < 50; vuelta++) {
+      const r = await llamarScript({ accion: 'filas', desde });
+      await Notas.poner(r.filas);
+      nuevas += r.filas.length;
+      desde = r.ultima;
+      await Ajustes.guardar('ultimaFila', desde);
+      if (!r.mas) break;
+    }
+    await Ajustes.guardar('copiadoA', new Date().toISOString());
+    return nuevas;
+  })();
+  copiando.finally(() => { copiando = null; });
+  return copiando;
 }

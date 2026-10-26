@@ -1,7 +1,7 @@
 {
-  "name": "Apunta",
-  "short_name": "Apunta",
-  "description": "Dicta apuntes y guárdalos en la hoja Apuntes de Drive",
+  "name": "Cartapacio",
+  "short_name": "Cartapacio",
+  "description": "Tus apuntes dictados, guardados en la hoja Apuntes de Drive",
   "lang": "es",
   "start_url": "./",
   "scope": "./",

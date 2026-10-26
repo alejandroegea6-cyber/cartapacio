@@ -1,21 +1,23 @@
-// Apunta — service worker.
+// Cartapacio — service worker.
 // 1) Guarda la app en el móvil para que abra sin cobertura.
 // 2) Cuando vuelve la señal, Chrome lo despierta para enviar lo pendiente
 //    aunque la app esté cerrada (Background Sync; no es instantáneo ni 100 % garantizado).
 
 importScripts('cola.js');
 
-const VERSION = 'apunta-v1';
+const PREFIJO = 'cartapacio-';
+const VERSION = PREFIJO + 'v1';
 const ARCHIVOS = ['./', 'index.html', 'cola.js', 'manifest.webmanifest', 'icono-192.png', 'icono-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(ARCHIVOS)).then(() => self.skipWaiting()));
 });
 
+// Solo borra copias antiguas de esta app (otras apps del mismo dominio no se tocan).
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys()
-      .then((claves) => Promise.all(claves.filter((k) => k !== VERSION).map((k) => caches.delete(k))))
+      .then((claves) => Promise.all(claves.filter((k) => k.startsWith(PREFIJO) && k !== VERSION).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
